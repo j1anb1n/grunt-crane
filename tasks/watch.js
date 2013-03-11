@@ -13,15 +13,15 @@ module.exports = function(grunt) {
         var timer = null;
         var done = this.async();
 
-        grunt.log.write('Waiting...');
+        grunt.log.subhead('Waiting...');
 
         getFiles().forEach(watchFile);
 
         timer = setInterval(function () {
             grunt.util._.difference(getFiles(), Object.keys(files))
                 .forEach(function (file) {
-                    console.log(file, 'add'.blue);
-                    watchFile(file);
+                    grunt.log.writeln('ADD: '.blue + file);
+                    onChange(file);
                 });
         }, 200);
 
@@ -35,37 +35,43 @@ module.exports = function(grunt) {
 
         function watchFile (file) {
             if (!files[file]) {
-                files[file] = fs.watch(file, function (e) {
-                    if (!fs.existsSync(file)) {
-                        files[file].close();
-                        console.log(file, 'removed'.red);
-                        delete files[file];
-                        delete mtimes[file];
-                    } else {
-                        var mtime = +fs.statSync(file).mtime;
-                        if (mtimes[file] === mtime) {
-                            return;
-                        }
-                        mtimes[file] = mtime;
-                        clearInterval(timer);
-
-                        Object.keys(files).forEach(function (file) {
-                            files[file].close();
-                        });
-
-                        var taskList = watch.tasks.map(function (task) {
-                            return grunt.template.process(task, {
-                                data: grunt.util._.merge({file: file.replace(src, '')}, grunt.config())
-                            });
-                        })
-
-                        grunt.task.run(taskList);
-
-                        grunt.task.run(nameArgs);
-                        done();
-                    }
+                files[file] = fs.watch(file, function () {
+                    onChange(file);
                 });
             }
+        }
+        function onChange (file) {
+            if (!fs.existsSync(file)) {
+                files[file].close();
+                grunt.log.writeln('REMOVE '.red + file);
+                delete files[file];
+                delete mtimes[file];
+                return;
+            }
+
+            var mtime = +fs.statSync(file).mtime;
+
+            if (mtimes[file] === mtime) {
+                return;
+            }
+
+            clearInterval(timer);
+
+            Object.keys(files).forEach(function (file) {
+                files[file].close();
+            });
+
+            var taskList = watch.tasks.map(function (task) {
+                return grunt.template.process(task, {
+                    data: grunt.util._.merge({file: file.replace(src, '')}, grunt.config())
+                });
+            });
+
+            grunt.task.run(taskList);
+
+            grunt.task.run(nameArgs);
+
+            done();
         }
     });
 };

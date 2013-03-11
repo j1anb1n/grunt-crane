@@ -29,16 +29,14 @@ module.exports = function (grunt) {
                     if ( error ) {
                         grunt.log.writeln(error.toString().red);
                         grunt.log.error(server.host+' error'.red);
-
-                        done(false);
                     } else {
                         grunt.log.write(stdout);
                         grunt.log.ok(server.host+' done'.green);
+                    }
 
-                        len --;
-                        if (!len) {
-                            done(true);
-                        }
+                    len --;
+                    if (!len) {
+                        done(true);
                     }
                 });
             } catch (ex) {
