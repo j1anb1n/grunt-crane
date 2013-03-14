@@ -4,12 +4,21 @@ var path = require('path');
 module.exports = function (grunt) {
     'use strict';
 
-    grunt.registerTask('rsync', function () {
+    grunt.registerTask('deploy', function () {
         var files = [].slice.call(arguments);
         var done = this.async();
-        var servers = grunt.config('servers');
-        var len = servers.length;
+        var config = grunt.config('deploy');
         var buildDir = grunt.config('dest');
+
+        var env = process.argv.filter(function (arg) {
+            return arg.indexOf('--env') === 0;
+        }).map(function (arg) {
+            return arg.split('=')[1];
+        })[0] || 'local';
+
+        var servers = config[env];
+        var len = servers.length;
+
         servers.forEach(function (server) {
             server.args = ["-vazR"];
             server.syncDest = true;
