@@ -70,14 +70,15 @@ module.exports = function (grunt) {
     function buildCmbJS(id) {
         var content = grunt.file.read(from + id);
 
-        var imports = content.split('\n');
+        var imports = content.replace(/\r/g, '').split('\n');
         content = imports
             .filter(function (f) {
                 return !!f.trim();
             })
             .map(function (f) {
                 if (!grunt.file.exists(from + f)) {
-                    throw new Error('File no exist:'+f);
+                    grunt.log.error('File no exist: [' + f + ']');
+                    throw new Error('File no exist: [' + f + ']');
                 }
                 return buildJS(f);
             })
