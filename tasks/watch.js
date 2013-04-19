@@ -1,7 +1,7 @@
 var mtimes = {};
+
 module.exports = function(grunt) {
     var fs = require('fs');
-
     grunt.registerTask('watch', function() {
         this.requiresConfig('watch');
 

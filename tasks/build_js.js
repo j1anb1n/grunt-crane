@@ -1,29 +1,20 @@
 var REQUIRE_RE = /[^.]\s*require\s*\(\s*(["'])([^'"\s\)]+)\1\s*\)/g;
-
+var db = require('../db');
 module.exports = function (grunt) {
     var minify  = grunt.config('minify');
     var from    = grunt.config('src');
     var to      = grunt.config('dest');
-    var mapFile = grunt.config('temp') + '/js_cmb_map.json';
-
-    var map     = {
-        "child": {},
-        "parent": {}
-    };
-
-    try {
-        map = grunt.file.readJSON(mapFile);
-    } catch (ex) {
-        grunt.file.write(mapFile, map);
-    }
 
     grunt.registerTask('build-js', 'Transport js files', function () {
         var files = [].slice.call(arguments);
 
-        files.forEach(builder);
+        files.forEach(function (file) {
+
+            build(file);
+        });
     });
 
-    function builder (id) {
+    function build (id) {
         var content = '';
         if (isCmbFile(id)) {
             var content = buildCmbJS(id);
@@ -32,19 +23,6 @@ module.exports = function (grunt) {
         }
 
         grunt.file.write(to + id, content);
-
-        if (map.child[id]) {
-            map.child[id] = map.child[id]
-                .filter(function (f) {
-                    if (!grunt.file.exists(from + f)) {
-                        delete map.parent[id];
-                        return false;
-                    }
-                    return true;
-                });
-            grunt.task.run(['build-js:' + map.child[id].join(':')]);
-        }
-        grunt.file.write(mapFile, JSON.stringify(map, null, 4));
     }
 
     function buildJS(id) {
@@ -69,51 +47,14 @@ module.exports = function (grunt) {
 
     function buildCmbJS(id) {
         var content = grunt.file.read(from + id);
+        var imports = content.split('\r?\n');
 
-        var imports = content.replace(/\r/g, '').split('\n');
         content = imports
-            .filter(function (f) {
-                return !!f.trim();
-            })
-            .map(function (f) {
-                if (!grunt.file.exists(from + f)) {
-                    grunt.log.error('File no exist: [' + f + ']');
-                    throw new Error('File no exist: [' + f + ']');
-                }
-                return buildJS(f);
+            .map(function (file) {
+                return grunt.file.read(to + id);
             })
             .join('\n');
 
-        imports.forEach(function (file) {
-            var child = map.child[file];
-            if (child && Array.isArray(child) && child.indexOf(id) === -1) {
-                child.push(id);
-            } else {
-                map.child[file] = [id];
-            }
-        });
-
-        // if an `@import` was deleted, then it should be removed from the map
-        if (map.parent[id]) {
-            map.parent[id]
-                .filter(function (child) {
-                    return imports.indexOf(child) === -1;
-                })
-                .forEach(function (file) {
-                    var child = map.child[file];
-                    if (child && Array.isArray(child) && child.indexOf(id) !== -1) {
-                        child.splice(child.indexOf(id), 1);
-                        if (!child.length) {
-                            delete map.child[file];
-                        }
-                    }
-                });
-        }
-        if (imports.length) {
-            map.parent[id] = imports;
-        } else {
-            delete map.parent[id];
-        }
         return content;
     }
 
