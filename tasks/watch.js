@@ -61,13 +61,7 @@ module.exports = function(grunt) {
                 files[file].close();
             });
 
-            var taskList = watch.tasks.map(function (task) {
-                return grunt.template.process(task, {
-                    data: grunt.util._.merge({file: file.replace(src, '')}, grunt.config())
-                });
-            });
-
-            grunt.task.run(taskList);
+            grunt.task.run(['build:' + file.replace(src, '')]);
 
             grunt.task.run(nameArgs);
 

@@ -1,18 +1,13 @@
 module.exports = function (grunt) {
-    var minify  = grunt.config('minify');
-    var src    = grunt.config('src');
-    var dest      = grunt.config('dest');
+    var src = grunt.config('src');
+    var dest = grunt.config('dest');
 
-    grunt.registerTask('build-tpl', 'Compile Template.', function () {
-        [].forEach.call(arguments, function (file) {
-            var content = grunt.file.read(src + file);
-            content = builder(content);
-            grunt.file.write(dest + file, 'define("'+file+'", [], function () { return ' + content.toString() + '})');
-        });
-    });
+    function Builder(id) {
+        this.id = id;
+        this.content = grunt.file.read(src + id);
+    }
 
-    // Thanks to: http://ejohn.org/blog/javascript-micro-templating/
-    function builder (str){
+    Builder.prototype.build = function () {
         var fn = new Function("obj",
             "var p=[],print=function(){p.push.apply(p,arguments);};" +
 
@@ -20,7 +15,7 @@ module.exports = function (grunt) {
             "with(obj){p.push('" +
 
             // Convert the template into pure JavaScript
-            str
+            this.content
                 .replace(/[\r\t\n]/g, " ")
                 .split("<%").join("\t")
                 .replace(/((^|%>)[^\t]*)'/g, "$1\r")
@@ -30,6 +25,19 @@ module.exports = function (grunt) {
                 .split("\r").join("\\'") +
             "');}return p.join('');");
 
-        return fn;
+        grunt.file.write(dest + this.id, 'define("'+this.id+'", [], function () { return ' + fn.toString() + '})');
     };
+
+    Builder.prototype.ready = function (cb) {
+        cb();
+        return this;
+    };
+
+    Builder.prototype.fail = function () {
+        return this;
+    };
+
+
+
+    return Builder;
 };
