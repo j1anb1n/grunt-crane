@@ -61,9 +61,7 @@ module.exports = function(grunt) {
                 files[file].close();
             });
 
-            grunt.task.run(['build:' + file.replace(src, '')]);
-
-            grunt.task.run(nameArgs);
+            grunt.task.run(['build:' + file.replace(src, ''), "watch"]);
 
             done();
         }

@@ -31,7 +31,6 @@ module.exports = function (grunt) {
 
         var defers = servers.map(function (args) {
             var defer = promise.Deferred();
-            args.push('-avR');
 
             if (!files.length) {
                 grunt.log.ok('no file');
@@ -39,6 +38,7 @@ module.exports = function (grunt) {
             }
 
             args = files.concat(args);
+
             var cmd = 'rsync ' + args.join(' ');
             try {
                 rsync(args, function (error, msg) {
