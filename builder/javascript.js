@@ -1,9 +1,12 @@
+var promise = require('../util/promise');
+
 module.exports = function (grunt) {
     var src  = grunt.config('src');
     var dest = grunt.config('dest');
     var minify = grunt.config('compress');
 
     function Builder (id) {
+        var defer = promise.Deferred();
         this.id = id;
         this.content = grunt.file.read(src + this.id);
 
@@ -12,6 +15,10 @@ module.exports = function (grunt) {
                 return !!file;
             });
         }
+        this.ready = defer.done;
+        this.fail = defer.fail;
+
+        defer.resolve();
     }
 
     Builder.prototype.getChildren = function () {
@@ -23,27 +30,26 @@ module.exports = function (grunt) {
     };
 
     Builder.prototype.build = function () {
+        var defer = promise.Deferred();
         var content = '';
-        if (this.isCmbFile()) {
-            content = this.getChildren()
-                .map(function (file) {
-                    return builder(file, grunt.file.read(src + file), minify);
-                })
-                .join('\n');
-        } else {
-            content = builder(this.id, this.content, minify);
+
+        try {
+            if (this.isCmbFile()) {
+                content = this.getChildren()
+                    .map(function (file) {
+                        return builder(file, grunt.file.read(src + file), minify);
+                    })
+                    .join('\n');
+            } else {
+                content = builder(this.id, this.content, minify);
+            }
+
+            grunt.file.write(dest + this.id, content);
+        } catch (ex) {
+            return defer.reject(ex.message);
         }
 
-        grunt.file.write(dest + this.id, content);
-    };
-
-    Builder.prototype.ready = function (cb) {
-        setTimeout(cb, 0);
-        return this;
-    };
-
-    Builder.prototype.fail = function () {
-        return this;
+        return defer.resolve([this.id]);
     };
 
     return Builder;

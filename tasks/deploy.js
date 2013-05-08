@@ -1,57 +1,71 @@
-var rsync = require('rsyncwrapper').rsync;
-var path = require('path');
+var rsync = require('../util/rsync');
+var promise = require('../util/promise');
 
 module.exports = function (grunt) {
-    'use strict';
+    var config = grunt.config('deploy');
+    var reportDir = 'reports/';
 
-    grunt.registerTask('deploy', function () {
-        var files = [].slice.call(arguments);
+    grunt.registerTask('deploy', function (report) {
         var done = this.async();
-        var config = grunt.config('deploy');
-        var buildDir = grunt.config('dest');
 
-        var env = process.argv.filter(function (arg) {
-            return arg.indexOf('--env') === 0;
-        }).map(function (arg) {
-            return arg.split('=')[1];
-        })[0] || 'local';
+        if (report) {
+            try {
+                report = grunt.file.readJSON(reportDir + report);
+            } catch (ex) {
+                return grunt.log.error('report file not found');
+            }
+        } else {
+            report = grunt.config('report');
+        }
+
+        if (!report) {
+            grunt.log.error('report not found');
+            return;
+        }
+
+        var files = Object.keys(report.build);
+
+        var env = grunt.option('env') || 'local';
 
         var servers = config[env];
-        var len = servers.length;
 
-        servers.forEach(function (server) {
-            server.args = ["-vazR"];
-            server.syncDest = true;
+        var defers = servers.map(function (args) {
+            var defer = promise.Deferred();
+            args.push('-avR');
 
-            if (files.length) {
-                server.src = grunt.util._.uniq(files.map(function (file) {
-                    return path.dirname(buildDir + file);
-                })).join(' ');
-            } else {
-                server.src = buildDir;
+            if (!files.length) {
+                grunt.log.ok('no file');
+                return;
             }
 
+            args = files.concat(args);
+            var cmd = 'rsync ' + args.join(' ');
             try {
-                rsync(server, function (error, stdout, stderr, cmd) {
-                    grunt.log.writeln(cmd.grey);
-
+                rsync(args, function (error, msg) {
                     if ( error ) {
-                        grunt.log.writeln(error.toString().red);
-                        grunt.log.error(server.host+' error'.red);
+                        grunt.log.writeln(msg.red);
+                        grunt.log.error(cmd.red);
+                        defer.reject();
                     } else {
-                        grunt.log.write(stdout);
-                        grunt.log.ok(server.host+' done'.green);
+                        grunt.log.writeln(msg.green);
+                        grunt.log.ok(cmd.green);
+                        defer.resolve();
                     }
-
-                    len --;
-                    if (!len) {
-                        done(true);
-                    }
-                });
+                }, {cwd: grunt.config(['dest'])});
             } catch (ex) {
-                grunt.log.writeln("\n"+ex.toString().red);
-                done(false);
+                grunt.log.writeln('\n'+ex.toString().red);
+                defer.reject();
             }
+
+            return defer.promise();
         });
+
+        promise.when(defers)
+            .done(function () {
+                done(true);
+            })
+            .fail(function () {
+                done(false);
+            });
     });
 };

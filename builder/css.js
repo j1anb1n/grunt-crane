@@ -1,7 +1,10 @@
 var path   = require('path');
 var rework = require('rework');
+var promise = require('../util/promise');
+
 var HTTP_FILE_RE = /^(https?:\/\/.*?\/)/;
 var CMB_CSS_RE = /\.cmb.css/;
+
 module.exports = function (grunt) {
     var src  = grunt.config('src');
     var dest = grunt.config('dest');
@@ -10,9 +13,14 @@ module.exports = function (grunt) {
 
     function Builder (id) {
         var self = this;
+        var defer = promise.Deferred();
+
         this.id = id;
         this.content = grunt.file.read(src + id);
         this.children = [];
+        this.ready = defer.done;
+        this.fail = defer.fail;
+
         if (CMB_CSS_RE.test(this.id)) {
             var images = [];
             this.children = this.content.split(/\r?\n/).map(function (file) {
@@ -51,10 +59,12 @@ module.exports = function (grunt) {
         }
 
         this.children = grunt.util._.uniq(this.children);
+        defer.resolve();
     }
 
     Builder.prototype.build = function() {
         var self = this;
+        var defer = promise.Deferred();
         var content = '';
         var dirname = path.dirname(this.id) + '/';
 
@@ -99,9 +109,9 @@ module.exports = function (grunt) {
                     filepath = path.normalize(path.dirname(self.id) + '/' + url);
                 }
 
-                return grunt.template.process(grunt.config.getRaw('version-template'), {
+                return grunt.template.process(grunt.config.getRaw('versionTemplate'), {
                     data: {
-                        version: +require('fs').statSync(src + filepath).mtime % grunt.config('cache-expire'),
+                        version: +require('fs').statSync(src + filepath).mtime % grunt.config('cacheExpire'),
                         url: require('../util/url').parseURL(url)
                     }
                 });
@@ -109,6 +119,8 @@ module.exports = function (grunt) {
             .toString();
 
         grunt.file.write(dest + this.id, content);
+
+        return defer.resolve([this.id]);
     };
 
     Builder.prototype.isCmbFile = function() {
@@ -117,15 +129,6 @@ module.exports = function (grunt) {
 
     Builder.prototype.getChildren = function() {
         return this.children || [];
-    };
-
-    Builder.prototype.ready = function(cb) {
-        setTimeout(cb, 0);
-        return this;
-    };
-
-    Builder.prototype.fail = function() {
-        return this;
     };
 
     return Builder;

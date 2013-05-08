@@ -55,6 +55,8 @@ module.exports = function (grunt) {
                 grunt.file.write(dest + id, tree.toCSS({
                     compress: minify
                 }));
+
+                return promise.Deferred().resolve([id]);
             };
 
             self.isCmbFile = function () {

@@ -1,3 +1,5 @@
+var promise = require('../util/promise');
+
 module.exports = function (grunt) {
     var src = grunt.config('src');
     var dest = grunt.config('dest');
@@ -26,6 +28,8 @@ module.exports = function (grunt) {
             "');}return p.join('');");
 
         grunt.file.write(dest + this.id, 'define("'+this.id+'", [], function () { return ' + fn.toString() + '})');
+
+        return promise.Deferred().resolve([this.id]);
     };
 
     Builder.prototype.ready = function (cb) {
