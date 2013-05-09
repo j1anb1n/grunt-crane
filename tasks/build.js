@@ -6,13 +6,26 @@ module.exports = function ( grunt ) {
     var dest      = grunt.config('dest');
     var compress  = grunt.config('compress');
     var taskToken = grunt.option('token') || Date.now();
-    var db        = grunt.db;
 
+    try {
+        grunt.db = grunt.file.readJSON('db.json');
+    } catch (ex) {
+        grunt.db = {
+            files: {}
+        };
+    }
+
+    grunt.db.save = function () {
+        grunt.file.write('db.json', JSON.stringify(grunt.db, null, 4));
+    };
+
+    grunt.db.save();
+
+    var db        = grunt.db;
 
     var builders  = grunt.config.getRaw('builder').map(function (builder) {
         return [builder[0], require('../' + builder[1])(grunt)];
     });
-
 
     grunt.registerTask('build', function () {
         var files = [].slice.call( arguments );
@@ -163,12 +176,8 @@ module.exports = function ( grunt ) {
                 done(false);
             })
             .done(function () {
-                done(true);
                 grunt.config('report', report);
-
-                if (!grunt.option('no-deploy')) {
-                    grunt.task.run(['deploy']);
-                }
+                done(true);
             })
             .always(function () {
                 grunt.db.save();

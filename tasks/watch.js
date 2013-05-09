@@ -5,9 +5,7 @@ module.exports = function(grunt) {
     grunt.registerTask('watch', function() {
         this.requiresConfig('watch');
 
-        var watch = grunt.config.getRaw('watch');
         var src = grunt.config('src');
-        var nameArgs = this.nameArgs;
 
         var files = {};
         var timer = null;
@@ -61,7 +59,7 @@ module.exports = function(grunt) {
                 files[file].close();
             });
 
-            grunt.task.run(['build:' + file.replace(src, ''), "watch"]);
+            grunt.task.run(['build:' + file.replace(src, ''), 'deploy', 'watch']);
 
             done();
         }
