@@ -4,7 +4,6 @@ var promise = require('../util/promise');
 module.exports = function ( grunt ) {
     var src       = grunt.config('src');
     var dest      = grunt.config('dest');
-    var compress  = grunt.config('compress');
     var taskToken = grunt.option('token') || Date.now();
 
     try {
@@ -20,8 +19,6 @@ module.exports = function ( grunt ) {
     };
 
     grunt.db.save();
-
-    var db        = grunt.db;
 
     var builders  = grunt.config.getRaw('builder').map(function (builder) {
         return [builder[0], require('../' + builder[1])(grunt)];
@@ -159,7 +156,7 @@ module.exports = function ( grunt ) {
                         })
                         .fail(function (msg) {
                             report.fail[file] = msg;
-                            defer.reject(ex.message);
+                            defer.reject(msg);
                         });
                 })
                 .fail(function (msg) {
@@ -182,7 +179,7 @@ module.exports = function ( grunt ) {
             .always(function () {
                 grunt.db.save();
 
-                grunt.file.write('reports/' + report.token, JSON.stringify(report, null, 4))
+                grunt.file.write('reports/' + report.token, JSON.stringify(report, null, 4));
             });
     });
 };

@@ -3,7 +3,7 @@ var promise = require('../util/promise');
 module.exports = function (grunt) {
     var src  = grunt.config('src');
     var dest = grunt.config('dest');
-    var minify = grunt.config('compress');
+    var minify = grunt.option('compress');
 
     function Builder (id) {
         var defer = promise.Deferred();
