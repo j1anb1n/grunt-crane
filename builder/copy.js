@@ -16,15 +16,5 @@ module.exports = function (grunt) {
         return defer.promise();
     };
 
-    Builder.prototype.ready = function (cb) {
-        cb();
-        return this;
-    };
-
-    Builder.prototype.fail = function () {
-        return this;
-    }
-
-
     return Builder;
 };

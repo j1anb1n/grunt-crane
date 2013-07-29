@@ -104,9 +104,13 @@ module.exports = function ( grunt ) {
         files = grunt.util._.without(files, 'config.json');
         files.push('config.json');
 
+        var done = this.async();
+
+
         var defers = files.map(function (file) {
-            var Builder, defer;
-            for (var i = 0; i < builders.length; i++) {
+            var Builder, builder, i;
+
+            for (i = 0; i < builders.length; i++) {
                 if (grunt.file.isMatch(builders[i][0], file)) {
                     Builder = builders[i][1];
                     break;
@@ -121,64 +125,43 @@ module.exports = function ( grunt ) {
                 grunt.db.files[file] = {};
             }
 
-            var builder = new Builder(file);
-            var defer = promise.Deferred();
+            builder = new Builder(file);
 
-            defer
-                .fail(function (msg) {
-                    grunt.log.error('BUILD FAIL: ['+file+']', msg);
-                })
-                .done(function () {
-                    grunt.log.ok('BUILD PASS:[' + file + ']');
-                });
-
-            builder
-                .ready(function () {
-                    if (builder.isCmbFile && builder.isCmbFile(file)) {
+            return builder.build()
+                .done(function (outputFileList) {
+                    if (builder.isCmbFile && builder.isCmbFile()) {
                         grunt.db.files[file].children = builder.getChildren(file);
                     }
-                    builder.build()
-                        .done(function (fileList) {
-                            fileList.forEach(function (file) {
-                                if (!fs.existsSync(dest + file)) {
-                                    return;
-                                }
 
-                                var timestamp = +fs.statSync(dest + file).mtime;
+                    outputFileList.forEach(function (file) {
+                        if (!fs.existsSync(dest + file)) {
+                            return;
+                        }
 
-                                grunt.db.files[file] = grunt.db.files[file] || {};
+                        var timestamp = +fs.statSync(dest + file).mtime;
 
-                                grunt.db.files[file].timestamp = timestamp;
-                                report.build[file] = {'timestamp' : timestamp};
-                            });
+                        grunt.db.files[file] = grunt.db.files[file] || {};
 
-                            defer.resolve();
-                        })
-                        .fail(function (msg) {
-                            report.fail[file] = msg;
-                            defer.reject(msg);
-                        });
+                        grunt.db.files[file].timestamp = timestamp;
+                        report.build[file] = {'timestamp' : timestamp};
+                    });
                 })
                 .fail(function (msg) {
-                    defer.reject(msg);
+                    report.fail[file] = msg;
                 });
-
-            return defer;
         });
 
-        var done = this.async();
-
         promise.when(defers)
-            .fail(function () {
-                done(false);
-            })
             .done(function () {
                 grunt.config('report', report);
                 done(true);
             })
+            .fail(function (msg) {
+                grunt.log.error(msg);
+                done(false);
+            })
             .always(function () {
                 grunt.db.save();
-
                 grunt.file.write('reports/' + report.token, JSON.stringify(report, null, 4));
             });
     });

@@ -6,7 +6,6 @@ module.exports = function (grunt) {
     var minify = grunt.option('compress');
 
     function Builder (id) {
-        var defer = promise.Deferred();
         this.id = id;
         this.content = grunt.file.read(src + this.id);
 
@@ -15,10 +14,6 @@ module.exports = function (grunt) {
                 return !!file;
             });
         }
-        this.ready = defer.done;
-        this.fail = defer.fail;
-
-        defer.resolve();
     }
 
     Builder.prototype.getChildren = function () {

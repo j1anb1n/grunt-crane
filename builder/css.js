@@ -13,38 +13,41 @@ module.exports = function (grunt) {
 
     function Builder (id) {
         var self = this;
-        var defer = promise.Deferred();
 
         this.id = id;
         this.content = grunt.file.read(src + id);
         this.children = [];
-        this.ready = defer.done;
-        this.fail = defer.fail;
+    }
+
+    Builder.prototype.build = function() {
+        var self = this;
+        var defer = promise.Deferred();
+        var content = '';
+        var dirname = path.dirname(this.id) + '/';
 
         if (CMB_CSS_RE.test(this.id)) {
             var images = [];
-            this.children = this.content.split(/\r?\n/).map(function (file) {
-                if (file.indexOf('.') === 0) {
-                    return path.normalize(path.dirname(id) + '/' + file);
-                }
-                return file;
-            });
+            this.children = this.content.split(/\r?\n/)
+                .filter(function (file) {
+                    return !!file.trim();
+                })
+                .map(function (file) {
+                    if (file.indexOf('.') === 0) {
+                        return path.normalize(path.dirname(id) + '/' + file);
+                    }
+                    return file;
+                });
         } else {
             // 获取css中的图片，记录children
             rework(this.content)
                 .use(rework.url(function (url) {
-                    var match = url.match(HTTP_FILE_RE);
                     // 外部图片不计入children
-                    if (match && rootpaths.indexOf(match[1]) === -1) {
+                    if (/^https?:\/\//.test(url)) {
                         return url;
                     }
 
-                    // http://xxx.com/xxx/xxx/xxx.jpg
-                    if (match) {
-                        return self.children.push(url.replace(match[1], ''));
-                    }
                     // ../xxx.jpg or ./xxx.jpg
-                    else if (url.substr(0, 1) === '.') { // ../xxx.jpg
+                    if (url.substr(0, 1) === '.') { // ../xxx.jpg
                         return self.children.push(path.normalize(path.dirname(self.id) + '/' + url));
                     }
                     // /xxx/xxx/xxx.jpg
@@ -59,20 +62,17 @@ module.exports = function (grunt) {
         }
 
         this.children = grunt.util._.uniq(this.children);
-        defer.resolve();
-    }
-
-    Builder.prototype.build = function() {
-        var self = this;
-        var defer = promise.Deferred();
-        var content = '';
-        var dirname = path.dirname(this.id) + '/';
 
         // 合并文件需要fix url
         if (CMB_CSS_RE.test(this.id)) {
             content = this.children
                 .map(function (file) {
-                    var c = grunt.file.read(src + file);
+                    try {
+                        var c = grunt.file.read(src + file);
+                    } catch (ex) {
+                        defer.reject('file no found:'+ file);
+                        return '';
+                    }
                     var dir = path.dirname(file) + '/';
 
                     if (dir.indexOf(dirname) !== 0) {
@@ -109,12 +109,9 @@ module.exports = function (grunt) {
                     filepath = path.normalize(path.dirname(self.id) + '/' + url);
                 }
 
-                return grunt.template.process(grunt.config.getRaw('versionTemplate'), {
-                    data: {
-                        version: +require('fs').statSync(src + filepath).mtime % grunt.config('cacheExpire'),
-                        url: require('../util/url').parseURL(url)
-                    }
-                });
+                var version = +require('fs').statSync(src + filepath).mtime % grunt.config('cacheExpire');
+
+                return url + '?v=' + version;
             }))
             .toString();
 

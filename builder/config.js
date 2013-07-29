@@ -21,14 +21,18 @@ module.exports = function (grunt) {
         var files = grunt.db.files;
         var lastTimestamp = Date.now() - cacheExpire;
 
-        Object.keys(files).filter(noConfig).forEach(function (name) {
+        Object.keys(files).forEach(function (name) {
             var file = files[name];
+
+            if (name === 'config.json') {
+                return;
+            }
 
             if (file.timestamp && file.timestamp > lastTimestamp) {
                 config.version[name] = file.timestamp % cacheExpire;
             }
 
-            if (file.children && file.children.length && file.children.filter(noImg).length) {
+            if (file.isCmbFile && file.children && file.children.length) {
                 config.combine[name] = file.children;
             }
         });
@@ -42,23 +46,9 @@ module.exports = function (grunt) {
         return defer.promise();
     };
 
-    Builder.prototype.ready = function (cb) {
-        cb();
-        return this;
-    };
-
-    Builder.prototype.fail = function () {
-        return this;
-    };
-
-
     return Builder;
 };
 
 function noImg (file) {
     return !(/(jpg|png|jpeg|gif)$/.test(file));
-}
-
-function noConfig(file) {
-    return file !== 'config.json';
 }

@@ -32,16 +32,5 @@ module.exports = function (grunt) {
         return promise.Deferred().resolve([this.id]);
     };
 
-    Builder.prototype.ready = function (cb) {
-        cb();
-        return this;
-    };
-
-    Builder.prototype.fail = function () {
-        return this;
-    };
-
-
-
     return Builder;
 };
