@@ -113,11 +113,11 @@ exports.when = function ( defers ){
     defers.forEach(function (defer) {
         defer
             .fail(function () {
-                ret.reject();
+                ret.reject.apply(ret, arguments);
             })
             .done(function () {
                 if (++count === len) {
-                    ret.resolve();
+                    ret.resolve.apply(ret, arguments);
                 }
             });
     });
