@@ -1,3 +1,4 @@
+var spawn = require('child_process').spawn;
 var mtimes = {};
 
 module.exports = function(grunt) {
@@ -9,7 +10,8 @@ module.exports = function(grunt) {
 
         var files = {};
         var timer = null;
-        var done = this.async();
+
+        this.async();
 
         grunt.log.subhead('Waiting...');
 
@@ -20,6 +22,7 @@ module.exports = function(grunt) {
                 .forEach(function (file) {
                     grunt.log.writeln('ADD: '.blue + file);
                     onChange(file);
+                    watchFile(file);
                 });
         }, 200);
 
@@ -38,6 +41,7 @@ module.exports = function(grunt) {
                 });
             }
         }
+
         function onChange (file) {
             if (!fs.existsSync(file)) {
                 files[file].close();
@@ -53,15 +57,26 @@ module.exports = function(grunt) {
                 return;
             }
 
-            clearInterval(timer);
+            mtimes[file] = mtime;
 
-            Object.keys(files).forEach(function (file) {
-                files[file].close();
+            var child = spawn('grunt', ['build:' + file.replace(src, ''), 'deploy']);
+            var output = '', errorMsg = '';
+
+            child.stdout.on('data', function (data) {
+                output += data;
             });
 
-            grunt.task.run(['build:' + file.replace(src, ''), 'deploy', 'watch']);
+            child.stderr.on('data', function (data) {
+                errorMsg += data;
+            });
 
-            done();
+            child.on('exit', function (code) {
+                if (code !== 0) {
+                    grunt.log.error(errorMsg || output);
+                    return;
+                }
+                grunt.log.writelns(output);
+            });
         }
     });
 };
