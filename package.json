@@ -20,7 +20,7 @@
       "url": "https://github.com/j1anb1n/gruntcrane/blob/master/LICENSE"
     }
   ],
-  "main": "Gruntfile.js",
+  "main": "index.js",
   "engines": {
     "node": ">= 0.8.0"
   },
