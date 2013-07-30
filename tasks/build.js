@@ -21,7 +21,7 @@ module.exports = function ( grunt ) {
     grunt.db.save();
 
     var builders  = grunt.config.getRaw('builder').map(function (builder) {
-        return [builder[0], require('../' + builder[1])(grunt)];
+        return [builder[0], builder[1](grunt)];
     });
 
     grunt.registerTask('build', function () {
@@ -34,6 +34,7 @@ module.exports = function ( grunt ) {
 
         // 如果没有提供文件列表则编译全部文件
         if (!files.length) {
+            grunt.log.writeln('Listing all files...');
             files = grunt.file
                 .expand({filter: function (path) {
                     return grunt.file.isFile(path);
@@ -101,14 +102,24 @@ module.exports = function ( grunt ) {
         report.fail  = {};
 
         // 将config.json移到到每次编译的末尾
-        files = grunt.util._.without(files, 'config.json');
-        files.push('config.json');
+        if (files.indexOf('config.json') !== -1) {
+            files = grunt.util._.without(files, 'config.json');
+            files.push('config.json');
+        }
 
         var done = this.async();
-
-
+        var completeCounter = 0;
+        grunt.log.write('Start compile ');
+        console.time('Compile Spent');
         var defers = files.map(function (file) {
-            var Builder, builder, i;
+            var Builder, builder, i, defer;
+
+            completeCounter++;
+
+            if (completeCounter / files.length > 0.05) {
+                grunt.log.write('.');
+                completeCounter = 0;
+            }
 
             for (i = 0; i < builders.length; i++) {
                 if (grunt.file.isMatch(builders[i][0], file)) {
@@ -127,11 +138,18 @@ module.exports = function ( grunt ) {
 
             builder = new Builder(file);
 
-            return builder.build()
+            try {
+                defer = builder.build();
+            } catch (ex) {
+                defer = promise.Deferred().reject(ex.message + ex.stack.toString()).promise();
+            }
+            return defer
                 .done(function (outputFileList) {
                     if (builder.isCmbFile && builder.isCmbFile()) {
                         grunt.db.files[file].children = builder.getChildren(file);
                     }
+
+                    outputFileList = outputFileList || [];
 
                     outputFileList.forEach(function (file) {
                         if (!fs.existsSync(dest + file)) {
@@ -152,17 +170,18 @@ module.exports = function ( grunt ) {
         });
 
         promise.when(defers)
-            .done(function () {
-                grunt.config('report', report);
-                done(true);
-            })
-            .fail(function (msg) {
-                grunt.log.error(msg);
-                done(false);
-            })
-            .always(function () {
+            .all.finish(function () {
+                var failCount = Object.keys(report.fail).length;
+                grunt.log.writeln('\n %d Files', defers.length);
+                console.timeEnd('Compile Spent');
                 grunt.db.save();
                 grunt.file.write('reports/' + report.token, JSON.stringify(report, null, 4));
+                if (failCount) {
+                    grunt.log.writeln('Finish with %d Errors'.red, failCount);
+                    done(false);
+                } else {
+                    done(true);
+                }
             });
     });
 };
