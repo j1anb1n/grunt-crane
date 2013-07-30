@@ -1,7 +1,13 @@
+var STATUS = exports.STATUS = {
+    PENDING: 'pending',
+    DONE   : 'done',
+    FAIL   : 'fail'
+};
+
 var Deferred = exports.Deferred = function () {
-    var PENDING = 'pending';
-    var DONE    = 'done';
-    var FAIL    = 'fail';
+    var PENDING = STATUS.PENDING;
+    var DONE    = STATUS.DONE;
+    var FAIL    = STATUS.FAIL;
 
     var state = PENDING;
     var callbacks = {
@@ -86,6 +92,7 @@ var Deferred = exports.Deferred = function () {
 
     function dispatch(cbs) {
         /*jshint loopfunc:true*/
+        var cb;
         while( (cb = cbs.shift()) || (cb = callbacks.always.shift()) ) {
             setTimeout( (function ( fn ) {
                 return function () {
@@ -104,23 +111,59 @@ exports.when = function ( defers ){
     }
     var ret     = Deferred();
     var len     = defers.length;
-    var count   = 0;
+    var isAllFinished = false;
+    var count   = 0, allCount = 0;
+    var results = [];
+
+    var dispatchAllFinished = (function () {
+        var queue = [];
+        return function (cb) {
+            if (cb) {
+                queue.push(cb);
+            }
+
+            if (isAllFinished) {
+                while ((cb = queue.shift())) {
+                    setTimeout((function (fn) {
+                        return function () {
+                            fn.apply({}, results);
+                        };
+                    })(cb), 0);
+                }
+            }
+        };
+    })();
 
     if (!len) {
         return ret.resolve().promise();
     }
 
-    defers.forEach(function (defer) {
+    defers.forEach(function (defer, i) {
         defer
             .fail(function () {
                 ret.reject.apply(ret, arguments);
+                results[i] = [].slice.call(arguments);
             })
             .done(function () {
                 if (++count === len) {
                     ret.resolve.apply(ret, arguments);
                 }
+                results[i] = [].slice.call(arguments);
+            })
+            .always(function () {
+                allCount++;
+                if (allCount === len) {
+                    isAllFinished = true;
+                    dispatchAllFinished();
+                }
             });
     });
+
+    ret.all = {
+        finish: function (cb) {
+            dispatchAllFinished(cb);
+        }
+    };
 
     return ret.promise();
 };
