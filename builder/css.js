@@ -1,4 +1,5 @@
 var path   = require('path');
+var URL    = require('url');
 var rework = require('rework');
 var promise = require('../util/promise');
 
@@ -41,6 +42,8 @@ module.exports = function (grunt) {
             // 获取css中的图片，记录children
             rework(this.content)
                 .use(rework.url(function (url) {
+                    url = URL.parse(url).pathname;
+
                     // 外部图片不计入children
                     if (/^https?:\/\//.test(url)) {
                         return url;
@@ -108,6 +111,7 @@ module.exports = function (grunt) {
                 } else {
                     filepath = path.normalize(path.dirname(self.id) + '/' + url);
                 }
+                filepath = URL.parse(filepath).pathname;
 
                 var version = +require('fs').statSync(src + filepath).mtime % grunt.config('cacheExpire');
 
