@@ -1,7 +1,7 @@
 {
   "name": "grunt-crane",
   "description": "static file builder set",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "homepage": "https://github.com/j1anb1n/grunt-crane",
   "author": {
     "name": "j1anb1n",
@@ -34,7 +34,8 @@
     "rework": "*",
     "uglify-js": "*",
     "async": "*",
-    "gaze": "~0.4.3"
+    "gaze": "~0.4.3",
+    "progress": "~1.1.2"
   },
   "keywords": [
     "gruntplugin"

@@ -1,5 +1,6 @@
 var fs = require('fs');
 var promise = require('../util/promise');
+var ProgressBar = require('progress');
 
 module.exports = function ( grunt ) {
     var src       = grunt.config('src');
@@ -108,18 +109,18 @@ module.exports = function ( grunt ) {
         }
 
         var done = this.async();
-        var completeCounter = 0;
-        grunt.log.write('Start compile ');
+
         console.time('Compile Spent');
+
+        var bar = new ProgressBar('Building: [:bar](:current / :total) :percent', {
+            total: files.length,
+            width: 30,
+            complete: "*",
+            incomplete: " "
+        });
+
         var defers = files.map(function (file) {
             var Builder, builder, i, defer;
-
-            completeCounter++;
-
-            if (completeCounter / files.length > 0.05) {
-                grunt.log.write('.');
-                completeCounter = 0;
-            }
 
             for (i = 0; i < builders.length; i++) {
                 if (grunt.file.isMatch(builders[i][0], file)) {
@@ -163,6 +164,7 @@ module.exports = function ( grunt ) {
                         grunt.db.files[file].timestamp = timestamp;
                         report.build[file] = {'timestamp' : timestamp};
                     });
+                    bar.tick();
                 })
                 .fail(function (msg) {
                     report.fail[file] = msg;

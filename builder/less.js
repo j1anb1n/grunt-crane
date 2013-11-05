@@ -31,8 +31,6 @@ module.exports = function (grunt) {
             paths: [src, path.dirname(path.resolve(src + id))]
         });
 
-
-
         parser.parse(this.content, function (err, tree) {
             if (err) {
                 console.log(err.message);
@@ -63,9 +61,13 @@ module.exports = function (grunt) {
         var self = this;
         var defer = promise.Deferred();
         this.parserDefer.done(function (tree) {
-            grunt.file.write(dest + self.id, tree.toCSS({
-                compress: minify
-            }));
+            try {
+                grunt.file.write(dest + self.id, tree.toCSS({
+                    compress: minify
+                }));
+            } catch (ex) {
+                defer.resolve([]);
+            }
 
             defer.resolve([self.id]);
         }).fail(function () {
