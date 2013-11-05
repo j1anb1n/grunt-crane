@@ -12,12 +12,10 @@ module.exports = function (grunt) {
 
     function Builder (id) {
         var self = this;
-        var defer = promise.Deferred();
 
         this.id = id;
         this.content = grunt.file.read(src + id);
-        this.ready = defer.done;
-        this.fail = defer.fail;
+        this.parserDefer = promise.Deferred();
 
         var parser = new Parser({
             compress: minify,
@@ -33,9 +31,12 @@ module.exports = function (grunt) {
             paths: [src, path.dirname(path.resolve(src + id))]
         });
 
+
+
         parser.parse(this.content, function (err, tree) {
             if (err) {
-                return defer.reject(err.message);
+                console.log(err.message);
+                return self.parserDefer.reject(err.message);
             }
 
             var imports = Object.keys(parser.imports.files)
@@ -51,20 +52,26 @@ module.exports = function (grunt) {
                 return children;
             };
 
-            self.build = function () {
-                grunt.file.write(dest + id, tree.toCSS({
-                    compress: minify
-                }));
-
-                return promise.Deferred().resolve([id]);
-            };
-
             self.isCmbFile = function () {
                 return !!children.length;
             };
-
-            defer.resolve();
+            self.parserDefer.resolve(tree);
         });
+    }
+
+    Builder.prototype.build = function () {
+        var self = this;
+        var defer = promise.Deferred();
+        this.parserDefer.done(function (tree) {
+            grunt.file.write(dest + self.id, tree.toCSS({
+                compress: minify
+            }));
+
+            defer.resolve([self.id]);
+        }).fail(function () {
+            defer.reject();
+        });
+        return defer.promise();
     }
 
     return Builder;
