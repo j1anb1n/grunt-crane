@@ -60,16 +60,18 @@ module.exports = function (grunt) {
     Builder.prototype.build = function () {
         var self = this;
         var defer = promise.Deferred();
+        var filename = self.id.replace(/\.less$/, '.css');
+
         this.parserDefer.done(function (tree) {
             try {
-                grunt.file.write(dest + self.id, tree.toCSS({
+                grunt.file.write(dest + filename, tree.toCSS({
                     compress: minify
                 }));
             } catch (ex) {
                 defer.resolve([]);
             }
 
-            defer.resolve([self.id]);
+            defer.resolve([filename]);
         }).fail(function () {
             defer.reject();
         });
