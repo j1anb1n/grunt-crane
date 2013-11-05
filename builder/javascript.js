@@ -66,7 +66,7 @@ function builder (id, content, minify) {
     content = 'define("' + id + '", ' + deps + ', function (require, exports, module) {\n' + content + '\n})';
 
     if (minify) {
-        return require('uglifyjs').minify(content, {fromString: true}).code;
+        return require('uglify-js').minify(content, {fromString: true}).code;
     }
 
     return content;
