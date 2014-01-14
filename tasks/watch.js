@@ -15,7 +15,7 @@ module.exports = function(grunt) {
         grunt.log.subhead('Watching...');
 
         gaze.on('all', function (event, filepath) {
-            filepath = filepath.replace(path.resolve(src), '');
+            filepath = filepath.replace(path.resolve(src) + '/', '');
             grunt.log.writeln('%s: %s', event.toUpperCase(), filepath);
 
             if (event !== 'deleted') {
