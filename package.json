@@ -1,7 +1,7 @@
 {
   "name": "grunt-crane",
   "description": "static file builder set",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "homepage": "https://github.com/j1anb1n/grunt-crane",
   "author": {
     "name": "j1anb1n",
